@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import Application, MessageHandler, CallbackContext, filters
+from telegram.ext import Application, MessageHandler, CommandHandler, CallbackContext, filters
 import logging
 import time
 from Text_generator import getTextResponse
@@ -11,6 +11,10 @@ config = load_config('config.txt')
 bot_token = config['bot_token']
 
 lastUpdateTime = time.time()
+
+async def start(update: Update, context: CallbackContext) -> None:
+    chat_id = update.effective_chat.id
+    await context.bot.send_message(chat_id=chat_id, text="Привет! Я отвечу на твои вопросы 🙂")
 
 async def handle_message(update: Update, context: CallbackContext) -> None:
     global lastUpdateTime
@@ -24,9 +28,9 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     if member.status in ["kicked", "left"]:
         return
     
-    print(update.message.text.lower())
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+    
     response = getTextResponse(update.message.text.lower())
-        
     await context.bot.send_message(chat_id=chat_id, text=response)
 
     lastUpdateTime = time.time()
@@ -34,6 +38,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
 def main():
     application = Application.builder().token(bot_token).build()
 
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     application.run_polling()
