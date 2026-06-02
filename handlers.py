@@ -1,6 +1,3 @@
-"""
-Модуль обработчиков команд и callback кнопок
-"""
 import logging
 from telegram import Update
 from telegram.ext import CallbackContext
@@ -28,7 +25,6 @@ CALLBACK_MAPPING = {
 }
 
 async def start_command(update: Update, context: CallbackContext) -> None:
-    """Обработчик команды /start"""
     chat_id = update.effective_chat.id
     user = update.effective_user
     
@@ -41,7 +37,6 @@ async def start_command(update: Update, context: CallbackContext) -> None:
     )
 
 async def callback_handler(update: Update, context: CallbackContext) -> None:
-    """Обработчик всех inline кнопок"""
     query = update.callback_query
     await query.answer()  # Закрыть loading анимацию
     
@@ -69,7 +64,6 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
             text=text,
             reply_markup=get_back_button()
         )
-        # Переводим бота в режим ожидания текстового ввода
         context.user_data['waiting_for_question'] = True
         return
     
@@ -103,7 +97,6 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
         )
 
 async def message_handler(update: Update, context: CallbackContext) -> None:
-    """Обработчик текстовых сообщений"""
     chat_id = update.effective_chat.id
     user_message = update.message.text
     

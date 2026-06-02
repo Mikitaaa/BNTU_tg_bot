@@ -27,16 +27,7 @@ DORMITORY_DATA = {
 }
 
 def get_dormitory_info(key: str) -> str:
-    """Получить информацию из БД по ключу"""
     return DORMITORY_DATA.get(key, "Информация не найдена")
 
 def get_all_dormitory_data() -> dict:
-    """Получить все данные"""
     return DORMITORY_DATA
-
-# Здесь позже можно добавить функции для работы с реальной БД:
-# - get_room_availability()
-# - check_payment_status(user_id)
-# - update_contact_info()
-# - submit_maintenance_request()
-# и т.д.

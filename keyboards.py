@@ -1,10 +1,6 @@
-"""
-Модуль для создания клавиатур и кнопок бота
-"""
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 
 def get_main_menu():
-    """Основное меню с кнопками"""
     keyboard = [
         [InlineKeyboardButton("🏠 Общежитие", callback_data="dormitory_info")],
         [InlineKeyboardButton("📋 Правила и регламент", callback_data="rules")],
@@ -17,7 +13,6 @@ def get_main_menu():
     return InlineKeyboardMarkup(keyboard)
 
 def get_dormitory_menu():
-    """Меню с информацией об общежитии"""
     keyboard = [
         [InlineKeyboardButton("🚪 Номера комнат", callback_data="room_numbers")],
         [InlineKeyboardButton("📍 Местоположение", callback_data="location")],
@@ -29,14 +24,12 @@ def get_dormitory_menu():
     return InlineKeyboardMarkup(keyboard)
 
 def get_back_button():
-    """Кнопка возврата в главное меню"""
     keyboard = [
         [InlineKeyboardButton("← Назад", callback_data="back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 def get_yes_no_keyboard():
-    """Клавиатура да/нет"""
     keyboard = [
         [InlineKeyboardButton("✅ Да", callback_data="yes"),
          InlineKeyboardButton("❌ Нет", callback_data="no")],
