@@ -30,11 +30,14 @@ async def start_command(update: Update, context: CallbackContext) -> None:
     
     welcome_text = f"👋 Привет, {user.first_name}!\n\n🤖 Я помощник по информации об общежитии БНТУ.\n\nЧто ты хочешь узнать?"
     
-    await context.bot.send_message(
+    sent = await context.bot.send_message(
         chat_id=chat_id,
         text=welcome_text,
         reply_markup=get_main_menu()
     )
+
+    context.user_data["last_bot_message_id"] = sent.message_id
+    context.user_data["waiting_for_question"] = False
 
 async def callback_handler(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -43,58 +46,67 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
     callback_data = query.data
     chat_id = query.message.chat_id
     message_id = query.message.message_id
+
+    context.user_data["last_bot_message_id"] = message_id
     
     # Обработка кнопки возврата
     if callback_data == "back_to_main":
         text = "🏠 Главное меню. Выбери раздел:"
-        await context.bot.edit_message_text(
+        msg = await context.bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=get_main_menu()
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
+        context.user_data["waiting_for_question"] = False
         return
     
     # Обработка кнопки свободного вопроса
     if callback_data == "free_question":
         text = "💬 Напиши свой вопрос, и я постараюсь помочь:"
-        await context.bot.edit_message_text(
+        msg = await context.bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=get_back_button()
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
         context.user_data['waiting_for_question'] = True
         return
     
     # Обработка кнопки информации об общежитии (подменю)
     if callback_data == "dormitory_info":
         text = "🏠 Выбери интересующую информацию:"
-        await context.bot.edit_message_text(
+        msg = await context.bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=get_dormitory_menu()
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
+        context.user_data["waiting_for_question"] = False
         return
     
     # Получение информации из базы данных
     if callback_data in CALLBACK_MAPPING:
         title, submenu = CALLBACK_MAPPING[callback_data]
-        info = get_dormitory_info(callback_data)
+        info = get_dormitory_info(callback_data) or "Информация пока недоступна."
         
         text = f"{title}\n\n{info}"
         
         # Если есть подменю, показываем его
         reply_markup = submenu() if submenu else get_back_button()
         
-        await context.bot.edit_message_text(
+        msg = await context.bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=reply_markup,
             parse_mode='HTML'
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
+        context.user_data["waiting_for_question"] = False
 
 async def message_handler(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
@@ -117,19 +129,24 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
             await context.bot.send_message(chat_id=chat_id, text="❌ Извините, произошла ошибка при обработке вашего вопроса.")
         
         # Возвращаем меню
-        await context.bot.send_message(
+        msg = await context.bot.send_message(
             chat_id=chat_id,
             text="Что еще ты хочешь узнать?",
             reply_markup=get_main_menu()
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
     else:
         try:
             await context.bot.delete_message(chat_id, user_message_id)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение пользователя: {e}")
+
+        last_bot_msg_id = context.user_data.get("last_bot_message_id")
         # Обработка обычных сообщений с меню
-        await context.bot.edit_message_text(
+        msg = await context.bot.edit_message_text(
             chat_id=chat_id,
+            message_id=last_bot_msg_id,
             text="👋 Пожалуйста, используй кнопки меню для навигации:",
             reply_markup=get_main_menu()
         )
+        context.user_data["last_bot_message_id"] = msg.message_id
