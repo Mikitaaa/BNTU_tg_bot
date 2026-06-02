@@ -99,6 +99,7 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
 async def message_handler(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     user_message = update.message.text
+    user_message_id = update.message.message_id
     
     # Если бот ожидает вопроса в режиме свободного вопроса
     if context.user_data.get('waiting_for_question'):
@@ -122,8 +123,12 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
             reply_markup=get_main_menu()
         )
     else:
+        try:
+            await context.bot.delete_message(chat_id, user_message_id)
+        except:
+            pass
         # Обработка обычных сообщений с меню
-        await context.bot.send_message(
+        await context.bot.edit_message_text(
             chat_id=chat_id,
             text="👋 Пожалуйста, используй кнопки меню для навигации:",
             reply_markup=get_main_menu()
