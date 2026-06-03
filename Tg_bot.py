@@ -14,7 +14,13 @@ if not bot_token:
     raise ValueError("❌ BOT_TOKEN не задан в переменных окружения")
 
 def main():
-    application = Application.builder().token(bot_token).build()
+
+    application = (
+    Application.builder()
+    .token(bot_token)
+    .concurrent_updates(True)   
+    .build()
+)
     
     application.add_handler(CommandHandler("start", start_command))
     

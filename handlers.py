@@ -4,6 +4,7 @@ from telegram.ext import CallbackContext
 from keyboards import get_main_menu, get_dormitory_menu, get_back_button, get_yes_no_keyboard
 from database import get_dormitory_info
 from Text_generator import getTextResponse
+from telegram.error import BadRequest
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -122,28 +123,28 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
     
     # Если бот ожидает вопроса в режиме свободного вопроса
     if context.user_data.get('waiting_for_question'):
+        import asyncio
+
         context.user_data['waiting_for_question'] = False
         context.user_data['is_generating'] = True
 
-        response = None
+        async def typing_loop():
+            while context.user_data.get("is_generating", False):
+                await context.bot.send_chat_action(chat_id, "typing")
+                await asyncio.sleep(4)
+
+        typing_task = asyncio.create_task(typing_loop())
+
         try:
-            import asyncio
-            
-            task = asyncio.create_task(getTextResponse(user_message))
-            
-            while not task.done():
-                await context.bot.send_chat_action(chat_id=chat_id, action="typing")
-                await asyncio.sleep(4)  # Отправляем "печатает" каждые 4 секунды
-            
-            response = task.result()
-            
+            response = await asyncio.to_thread(getTextResponse, user_message)
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             response = "❌ Извините, произошла ошибка при обработке вашего вопроса."
-        
-        if response:
-            context.user_data["is_generating"] = False
-            await context.bot.send_message(chat_id=chat_id, text=response)
+
+        context.user_data["is_generating"] = False
+        typing_task.cancel()
+
+        await context.bot.send_message(chat_id, text=response)
 
         # Возвращаем меню
         msg = await context.bot.send_message(
@@ -152,6 +153,8 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
             reply_markup=get_main_menu()
         )
         context.user_data["last_bot_message_id"] = msg.message_id
+        return
+
     else:
         try:
             await context.bot.delete_message(chat_id, user_message_id)
@@ -160,10 +163,16 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
 
         last_bot_msg_id = context.user_data.get("last_bot_message_id")
         # Обработка обычных сообщений с меню
-        msg = await context.bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=last_bot_msg_id,
-            text="👋 Пожалуйста, используй кнопки меню для навигации:",
-            reply_markup=get_main_menu()
-        )
-        context.user_data["last_bot_message_id"] = msg.message_id
+        try:
+            msg = await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=last_bot_msg_id,
+                text="👋 Пожалуйста, используй кнопки меню для навигации:",
+                reply_markup=get_main_menu()
+            )
+            context.user_data["last_bot_message_id"] = msg.message_id
+        except BadRequest as e:
+            if "message is not modified" in str(e).lower():
+                return
+            else:
+                raise
