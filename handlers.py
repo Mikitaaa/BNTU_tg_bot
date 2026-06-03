@@ -112,22 +112,39 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     user_message = update.message.text
     user_message_id = update.message.message_id
+
+    if context.user_data.get("is_generating", False):
+        try:
+            await context.bot.delete_message(chat_id, user_message_id)
+        except:
+            pass
+        return
     
     # Если бот ожидает вопроса в режиме свободного вопроса
     if context.user_data.get('waiting_for_question'):
         context.user_data['waiting_for_question'] = False
-        
-        # Показываем "печатает"
-        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
-        
+        context.user_data['is_generating'] = True
+
+        response = None
         try:
-            # Отправляем вопрос в Gemini AI
-            response = getTextResponse(user_message)
-            await context.bot.send_message(chat_id=chat_id, text=response)
+            import asyncio
+            
+            task = asyncio.create_task(getTextResponse(user_message))
+            
+            while not task.done():
+                await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+                await asyncio.sleep(4)  # Отправляем "печатает" каждые 4 секунды
+            
+            response = task.result()
+            
         except Exception as e:
             logger.error(f"Error generating response: {e}")
-            await context.bot.send_message(chat_id=chat_id, text="❌ Извините, произошла ошибка при обработке вашего вопроса.")
+            response = "❌ Извините, произошла ошибка при обработке вашего вопроса."
         
+        if response:
+            context.user_data["is_generating"] = False
+            await context.bot.send_message(chat_id=chat_id, text=response)
+
         # Возвращаем меню
         msg = await context.bot.send_message(
             chat_id=chat_id,
