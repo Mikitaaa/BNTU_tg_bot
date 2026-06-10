@@ -3,6 +3,7 @@ from telegram import Update
 from telegram.ext import CallbackContext
 from keyboards import get_main_menu, get_dormitory_menu, get_back_button, get_yes_no_keyboard
 from database import get_dormitory_info
+from Question_analyzer import get_intelligent_response
 from Text_generator import getTextResponse
 from telegram.error import BadRequest, Forbidden
 
@@ -156,7 +157,7 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
         typing_task = asyncio.create_task(typing_loop())
 
         try:
-            response = await asyncio.to_thread(getTextResponse, user_message)
+            response = await asyncio.to_thread(get_intelligent_response, user_message)
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             response = "❌ Извините, произошла ошибка при обработке вашего вопроса."
