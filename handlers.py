@@ -52,7 +52,7 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
     
     callback_data = query.data
     chat_id = query.message.chat_id
-    message_id = query.message.message_id
+    message_id = context.user_data.get("last_bot_message_id")
 
     context.user_data["last_bot_message_id"] = message_id
     
