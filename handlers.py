@@ -59,6 +59,7 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
     # Обработка кнопки возврата
     try:
         if callback_data == "back_to_main":
+            context.user_data["waiting_for_question"] = False
             text = "🏠 Главное меню. Выбери раздел:"
             msg = await context.bot.edit_message_text(
                 chat_id=chat_id,
@@ -67,7 +68,6 @@ async def callback_handler(update: Update, context: CallbackContext) -> None:
                 reply_markup=get_main_menu()
             )
             context.user_data["last_bot_message_id"] = msg.message_id
-            context.user_data["waiting_for_question"] = False
             return
         
         # Обработка кнопки свободного вопроса
@@ -142,11 +142,9 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
             pass
         return
     
-    # Если бот ожидает вопроса в режиме свободного вопроса
     if context.user_data.get('waiting_for_question'):
         import asyncio
 
-        context.user_data['waiting_for_question'] = False
         context.user_data['is_generating'] = True
 
         async def typing_loop():
@@ -165,14 +163,8 @@ async def message_handler(update: Update, context: CallbackContext) -> None:
         context.user_data["is_generating"] = False
         typing_task.cancel()
 
-        await context.bot.send_message(chat_id, text=response)
+        msg = await context.bot.send_message(chat_id, text=response, reply_markup=get_back_button())
 
-        # Возвращаем меню
-        msg = await context.bot.send_message(
-            chat_id=chat_id,
-            text="Что еще ты хочешь узнать?",
-            reply_markup=get_main_menu()
-        )
         context.user_data["last_bot_message_id"] = msg.message_id
         return
 
